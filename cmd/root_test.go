@@ -276,7 +276,7 @@ func TestNewCommandArguments(t *testing.T) {
 			desc: "using the fuse temporary directory flag",
 			args: []string{"--fuse", "/cloudsql", "--fuse-tmp-dir", "/mycooldir"},
 			want: withDefaults(&proxy.Config{
-				FUSEDir:        "/cloudsql",
+				FUSEDir:     "/cloudsql",
 				FUSETempDir: "/mycooldir",
 			}),
 		},
