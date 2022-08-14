@@ -265,21 +265,6 @@ func TestNewCommandArguments(t *testing.T) {
 				QuotaProject: "proj",
 			}),
 		},
-		{
-			desc: "using the fuse flag",
-			args: []string{"--fuse", "/cloudsql"},
-			want: withDefaults(&proxy.Config{
-				FUSEDir: "/cloudsql",
-			}),
-		},
-		{
-			desc: "using the fuse temporary directory flag",
-			args: []string{"--fuse", "/cloudsql", "--fuse-tmp-dir", "/mycooldir"},
-			want: withDefaults(&proxy.Config{
-				FUSEDir:     "/cloudsql",
-				FUSETempDir: "/mycooldir",
-			}),
-		},
 	}
 
 	for _, tc := range tcs {
