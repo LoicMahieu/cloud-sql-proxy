@@ -23,23 +23,35 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse/nodefs"
 )
 
+// symlink implements a symbolic link, returning the underlying path when
+// Readlink is called.
+type symlink struct {
+	fs.Inode
+	path string
+}
+
+// Readlink implements fs.NodeReadlinker and returns the symlink's path.
+func (s *symlink) Readlink(ctx context.Context) ([]byte, syscall.Errno) {
+	return []byte(s.path), fs.OK
+}
+
 // readme represents a static read-only text file.
 type readme struct {
 	fs.Inode
 }
 
 const readmeText = `
-When programs attempt to open files in this directory, a remote connection to
-the Cloud SQL instance of the same name will be established.
+When applications attempt to open files in this directory, a remote connection
+to the Cloud SQL instance of the same name will be established.
 
-That is, running:
+For example, given you have the correct permissions, running the following
+commands will open a new connection to the specified instance:
 
 	mysql -u root -S "/path/to/this/directory/project:region:instance-2"
-	-or-
-	psql "host=/path/to/this/directory/project:region:instance-2 dbname=mydb user=myuser"
 
-will open a new connection to the specified instance, given you have the correct
-permissions.
+	-or-
+
+	psql "host=/path/to/this/directory/project:region:instance-2 dbname=mydb user=myuser"
 
 Listing the contents of this directory will show all instances with active
 connections.
