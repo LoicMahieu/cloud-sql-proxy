@@ -189,25 +189,26 @@ func TestFUSEErrors(t *testing.T) {
 	d := &fakeDialer{}
 	c, _ := newTestClient(t, d, randTmpDir(t), randTmpDir(t))
 
-	// Simulate FUSE file access by invoking Lookup directly to control the
-	// context passed in.
+	// Simulate FUSE file access by invoking Lookup directly to control
+	// how the socket cache is populated.
 	_, err := c.Lookup(ctx, "proj:reg:mysql", nil)
 	if err != fs.OK {
 		t.Fatalf("proxy.Client.Lookup(): %v", err)
 	}
 
+	// Close the client to close all open sockets.
 	if err := c.Close(); err != nil {
 		t.Fatalf("c.Close(): %v", err)
 	}
 
-	// Simulate another FUSE file access.
+	// Simulate another FUSE file access to directly populated the socket cache.
 	_, err = c.Lookup(ctx, "proj:reg:mysql", nil)
 	if err != fs.OK {
 		t.Fatalf("proxy.Client.Lookup(): %v", err)
 	}
 
-	// Verify the dialer was called twice, to prove both attempts did not hit
-	// the cache.
+	// Verify the dialer was called twice, to prove the previous cache entry was
+	// removed when the socket was closed.
 	var attempts int
 	wantAttempts := 2
 	for i := 0; i < 10; i++ {
@@ -250,7 +251,7 @@ func TestFUSECheckConnections(t *testing.T) {
 		t.Fatalf("c.CheckConnections(): %v", err)
 	}
 
-	// verify the dialer was invoked twice, one for connect, once for check
+	// verify the dialer was invoked twice, once for connect, once for check
 	// connection
 	var attempts int
 	wantAttempts := 2

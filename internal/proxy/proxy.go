@@ -310,9 +310,10 @@ type Client struct {
 	fuseMu sync.Mutex
 	// fuseSockets is a map of instance connection name to socketMount and
 	// symlink.
-	fuseSockets map[string]socketSymlink
-	fuseServer  *fuse.Server
-	fuseWg      sync.WaitGroup
+	fuseSockets  map[string]socketSymlink
+	fuseServerMu sync.Mutex
+	fuseServer   *fuse.Server
+	fuseWg       sync.WaitGroup
 
 	// Inode adds support for FUSE operations.
 	fs.Inode
@@ -516,7 +517,9 @@ func (c *Client) Serve(ctx context.Context, notify func()) error {
 		if err != nil {
 			return fmt.Errorf("FUSE mount failed: %q: %v", c.fuseDir, err)
 		}
+		c.fuseServerMu.Lock()
 		c.fuseServer = srv
+		c.fuseServerMu.Unlock()
 		notify()
 		<-ctx.Done()
 		return ctx.Err()
@@ -564,8 +567,12 @@ func (m MultiErr) Error() string {
 func (c *Client) Close() error {
 	mnts := c.mnts
 
+	c.fuseServerMu.Lock()
+	hasFuseServer := c.fuseServer != nil
+	c.fuseServerMu.Unlock()
+
 	var mErr MultiErr
-	if c.fuseServer != nil {
+	if hasFuseServer {
 		if err := c.fuseServer.Unmount(); err != nil {
 			mErr = append(mErr, err)
 		}
@@ -584,7 +591,7 @@ func (c *Client) Close() error {
 			mErr = append(mErr, err)
 		}
 	}
-	if c.fuseServer != nil {
+	if hasFuseServer {
 		c.fuseWg.Wait()
 	}
 	// Next, close the dialer to prevent any additional refreshes.
