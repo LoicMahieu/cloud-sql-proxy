@@ -383,9 +383,23 @@ func NewClient(ctx context.Context, d cloudsql.Dialer, l cloudsql.Logger, conf *
 	return c, nil
 }
 
+// Readdir returns a list of all active Unix sockets in addition to the README.
 func (c *Client) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 	entries := []fuse.DirEntry{
 		{Name: "README", Mode: 0555 | fuse.S_IFREG},
+	}
+	var active []string
+	c.fuseMu.Lock()
+	for k := range c.fuseSockets {
+		active = append(active, k)
+	}
+	c.fuseMu.Unlock()
+
+	for _, a := range active {
+		entries = append(entries, fuse.DirEntry{
+			Name: a,
+			Mode: 0777 | syscall.S_IFSOCK,
+		})
 	}
 	return fs.NewListDirStream(entries), fs.OK
 }

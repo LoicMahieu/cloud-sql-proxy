@@ -184,6 +184,32 @@ func TestFUSEDialInstance(t *testing.T) {
 	}
 }
 
+func TestFUSEReadDir(t *testing.T) {
+	fuseDir := randTmpDir(t)
+	_, cleanup := newTestClient(t, &fakeDialer{}, fuseDir, randTmpDir(t))
+	defer cleanup()
+
+	// Initiate a connection so the FUSE server will list it in the dir entries.
+	conn := tryDialUnix(t, filepath.Join(fuseDir, "proj:reg:mysql"))
+	defer conn.Close()
+
+	entries, err := os.ReadDir(fuseDir)
+	if err != nil {
+		t.Fatalf("os.ReadDir(): %v", err)
+	}
+	// len should be README plus the proj:reg:mysql socket
+	if got, want := len(entries), 2; got != want {
+		t.Fatalf("want = %v, got = %v", want, got)
+	}
+	var names []string
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	if names[0] != "README" || names[1] != "proj:reg:mysql" {
+		t.Fatalf("want = %v, got = %v", []string{"README", "proj:reg:mysql"}, names)
+	}
+}
+
 func TestFUSEErrors(t *testing.T) {
 	ctx := context.Background()
 	d := &fakeDialer{}
